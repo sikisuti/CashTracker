@@ -89,8 +89,13 @@
                         <goals>
                             <goal>npm</goal>
                         </goals>
+                        <!-- "install", not "ci": ci deletes node_modules wholesale before reinstalling,
+                             and Windows refuses to unlink the running esbuild.exe that "ng serve" keeps
+                             alive, so any Maven build would fail while a dev server was up. install
+                             leaves an already-correct tree in place. It honours package-lock.json but,
+                             unlike ci, will update the lockfile if package.json has drifted. -->
                         <configuration>
-                            <arguments>ci</arguments>
+                            <arguments>install</arguments>
                         </configuration>
                     </execution>
                     <execution>
