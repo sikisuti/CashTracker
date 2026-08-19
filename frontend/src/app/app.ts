@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
-import { TransactionListComponent } from './transactions/transaction-list.component';
+import { RouterOutlet } from '@angular/router';
+import { SidebarComponent } from './shell/sidebar.component';
 
 @Component({
   selector: 'app-root',
-  imports: [TransactionListComponent],
+  imports: [RouterOutlet, SidebarComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

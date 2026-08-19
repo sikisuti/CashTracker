@@ -1,0 +1,45 @@
+<header class="page-header">
+  <h1>{{ year }}</h1>
+  <p>Pick a month to see its days.</p>
+</header>
+
+<ol class="month-list">
+  @for (month of months; track month.key) {
+    <li class="month">
+      <button
+        type="button"
+        class="month-header"
+        [class.expanded]="isExpanded(month)"
+        [attr.aria-expanded]="isExpanded(month)"
+        [attr.aria-controls]="'days-' + month.key"
+        (click)="toggle(month)"
+      >
+        <svg
+          class="chevron"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+        <span class="month-name">{{ month.date | date: 'MMMM' }}</span>
+        <span class="day-count">{{ month.days.length }} days</span>
+      </button>
+
+      @if (isExpanded(month)) {
+        <ol class="day-list" [id]="'days-' + month.key">
+          @for (day of month.days; track day.key) {
+            <li class="day" [class.today]="isToday(day.key)">
+              <span class="day-number">{{ day.date | date: 'd' }}</span>
+              <span class="weekday">{{ day.date | date: 'EEEE' }}</span>
+            </li>
+          }
+        </ol>
+      }
+    </li>
+  }
+</ol>
