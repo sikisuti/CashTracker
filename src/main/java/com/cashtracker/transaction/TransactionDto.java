@@ -1,15 +1,29 @@
 package com.cashtracker.transaction;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
-public record TransactionDto(Long id, String description, BigDecimal amount, LocalDate date) {
+public record TransactionDto(
+        Long id,
+        LocalDate date,
+        String type,
+        LocalDateTime transactionDateTime,
+        long amount,
+        String accountNumber,
+        String owner,
+        String comment,
+        String category) {
 
     static TransactionDto from(Transaction transaction) {
         return new TransactionDto(
                 transaction.getId(),
-                transaction.getDescription(),
+                transaction.getDailyBalance().getDate(),
+                transaction.getType(),
+                transaction.getTransactionDateTime(),
                 transaction.getAmount(),
-                transaction.getDate());
+                transaction.getAccountNumber(),
+                transaction.getOwner(),
+                transaction.getComment(),
+                transaction.getCategory() == null ? null : transaction.getCategory().getName());
     }
 }

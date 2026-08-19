@@ -1,14 +1,17 @@
 package com.cashtracker.transaction;
 
+import com.cashtracker.category.Category;
+import com.cashtracker.dailybalance.DailyBalance;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transactions")
@@ -18,50 +21,80 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "daily_balance_id", nullable = false)
+    private DailyBalance dailyBalance;
+
     @Column(nullable = false)
-    private String description;
+    private String type;
 
-    @Column(nullable = false, precision = 19, scale = 4)
-    private BigDecimal amount;
+    @Column(name = "transaction_datetime")
+    private LocalDateTime transactionDateTime;
 
-    @Column(name = "txn_date", nullable = false)
-    private LocalDate date;
+    @Column(nullable = false)
+    private long amount;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
-    private String createdAt;
+    @Column(name = "account_number", nullable = false)
+    private String accountNumber;
+
+    @Column(nullable = false)
+    private String owner;
+
+    @Column(nullable = false)
+    private String comment;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     protected Transaction() {
+    }
+
+    public Transaction(DailyBalance dailyBalance, String type, LocalDateTime transactionDateTime, long amount,
+            String accountNumber, String owner, String comment, Category category) {
+        this.dailyBalance = dailyBalance;
+        this.type = type;
+        this.transactionDateTime = transactionDateTime;
+        this.amount = amount;
+        this.accountNumber = accountNumber;
+        this.owner = owner;
+        this.comment = comment;
+        this.category = category;
     }
 
     public Long getId() {
         return id;
     }
 
-    public String getDescription() {
-        return description;
+    public DailyBalance getDailyBalance() {
+        return dailyBalance;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public String getType() {
+        return type;
     }
 
-    public BigDecimal getAmount() {
+    public LocalDateTime getTransactionDateTime() {
+        return transactionDateTime;
+    }
+
+    public long getAmount() {
         return amount;
     }
 
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
+    public String getAccountNumber() {
+        return accountNumber;
     }
 
-    public LocalDate getDate() {
-        return date;
+    public String getOwner() {
+        return owner;
     }
 
-    public void setDate(LocalDate date) {
-        this.date = date;
+    public String getComment() {
+        return comment;
     }
 
-    public String getCreatedAt() {
-        return createdAt;
+    public Category getCategory() {
+        return category;
     }
 }

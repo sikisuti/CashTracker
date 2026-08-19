@@ -2,7 +2,12 @@ spring:
   application:
     name: cashtracker
   datasource:
-    url: jdbc:sqlite:${user.home}/.cashtracker/cashtracker.db
+    # date_class=TEXT: the xerial driver defaults to storing DATE/TIMESTAMP columns as raw epoch-
+    # millisecond integers, but Hibernate's community SQLiteDialect always reads temporal columns
+    # back via getString() and parses that text with its own formatter -- it never handles the
+    # integer form. Without this, any LocalDate/LocalDateTime written through JPA fails to read
+    # back with a java.text.ParseException.
+    url: jdbc:sqlite:${user.home}/.cashtracker/cashtracker.db?date_class=TEXT
     driver-class-name: org.sqlite.JDBC
   jpa:
     database-platform: org.hibernate.community.dialect.SQLiteDialect
