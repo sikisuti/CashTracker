@@ -11,6 +11,12 @@
   --text-muted: #6b7480;
   --accent: #2f6df6;
   --accent-soft: #e6edfe;
+  --border-strong: #c3c9d2;
+  --danger: #c0392f;
+  --warning: #8a5a00;
+  --warning-soft: #fdf0d5;
+  --success: #1e7a4a;
+  --success-soft: #e2f4ea;
   --tooltip-bg: #1b1f24;
   --tooltip-text: #ffffff;
 }

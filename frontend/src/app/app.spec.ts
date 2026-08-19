@@ -2,12 +2,13 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
+import { LOCALE_PROVIDERS } from './locale';
 
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)],
+      providers: [provideRouter(routes), LOCALE_PROVIDERS],
     }).compileComponents();
   });
 
@@ -23,7 +24,7 @@ describe('App', () => {
 
     const links = fixture.nativeElement.querySelectorAll('.sidebar a');
     expect(links.length).toBeGreaterThan(0);
-    expect(links[0].getAttribute('aria-label')).toBe('Home');
+    expect(links[0].getAttribute('aria-label')).toBe('Kezdőlap');
     expect(links[0].getAttribute('href')).toBe('/home');
   });
 });

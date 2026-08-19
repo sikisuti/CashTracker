@@ -7,8 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Backend (run from repo root):
 - `mvn spring-boot:run` — build the Angular frontend, copy it into Spring Boot static resources,
   and start the app on `http://localhost:8090`.
-- `mvn test` — run backend tests (JUnit via `spring-boot-starter-test`). No test classes exist yet;
-  `src/test/java/...` mirrors `src/main/java/...` when added.
+- `mvn test` — run backend tests (JUnit via `spring-boot-starter-test`); `src/test/java/...`
+  mirrors `src/main/java/...`. Spring Boot 4 moved the old `@DataJpaTest`/`@WebMvcTest` slices out
+  of `spring-boot-test-autoconfigure` into per-technology modules, so those annotations come from
+  the extra `spring-boot-starter-data-jpa-test` / `spring-boot-starter-webmvc-test` test-scope
+  dependencies and live in new packages (`org.springframework.boot.data.jpa.test.autoconfigure`,
+  `org.springframework.boot.webmvc.test.autoconfigure`, …).
 - `mvn test -Dtest=ClassName` — run a single test class.
 - `mvn package` — full build producing `target/cashtracker-0.0.1-SNAPSHOT.jar` (runs the frontend
   build as part of `generate-resources`).
@@ -37,7 +41,7 @@ both the API and the compiled SPA. `src/main/resources/static/` in source contro
 
 **Package-by-feature backend**: each package under `com.cashtracker` is a vertical slice
 (`transaction`, `category`, `dailybalance`, `correction`, `legacyimport`), not a horizontal
-layer. Only `transaction` currently exposes a REST controller/service; the others are
+layer. `transaction` and `dailybalance` expose a REST controller/service; the others are
 entity+repository pairs consumed internally (so far only by `legacyimport`). Follow this
 package-per-feature shape rather than introducing `controller`/`service`/`repository` packages.
 
@@ -59,6 +63,11 @@ reasoning):
 - Hand-written SQL date/datetime literals (seed data, manual fixes) must use full
   `YYYY-MM-DD HH:MM:SS.ffffff` text, not a bare date — inserts through JPA entities already handle
   this correctly.
+- For the same reason, date columns are compared as text. Range queries should use a half-open
+  bound (`date >= :from AND date < :toExclusive`, i.e. Spring Data
+  `…GreaterThanEqualAnd…LessThan`) rather than `BETWEEN`: a closed upper bound is only correct if
+  the bound parameter is rendered with the same time suffix as the stored value, whereas a
+  half-open one is right either way. See `DailyBalanceRepository`.
 - SQLite has limited `ALTER TABLE` support. Schema changes to existing columns should use the
   create-new-table/copy/drop/rename pattern instead of `ALTER TABLE ... MODIFY/DROP COLUMN`.
 - `sqlite-jdbc` and `hibernate-community-dialects` are both pinned explicitly (not managed by
@@ -74,7 +83,15 @@ category/daily-balance/transaction/correction data and reloads it inside one `@T
 call. Source transaction IDs are not globally unique across days, so correction-to-transaction
 pairing is resolved with a per-day ID map, not a global one.
 
-**Frontend**: standalone Angular components (no NgModules), calling `/api/*` through injected
+**Frontend**: the UI is Hungarian-only. `LOCALE_ID` is pinned to `hu` in
+[locale.ts](frontend/src/app/locale.ts), so `DatePipe`/`CurrencyPipe` already produce Hungarian
+month names, a non-breaking space as the thousands separator and a trailing `Ft` — don't
+hand-format any of that. All user-visible strings are written in Hungarian directly in the
+templates (no i18n extraction), and the shared `FORMATS` constant in the same file holds the
+display formats (`yyyy MMM dd` for dates, `yyyy MMMM` for month headings, whole-forint currency)
+so they cannot drift between templates.
+
+Standalone Angular components (no NgModules), calling `/api/*` through injected
 `HttpClient` services (`inject()`-style DI, e.g.
 [transaction.service.ts](frontend/src/app/transactions/transaction.service.ts)). `ng serve` proxies
 `/api` to the backend per `frontend/proxy.conf.json`; in production the same paths are served by

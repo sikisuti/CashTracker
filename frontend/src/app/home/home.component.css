@@ -1,6 +1,6 @@
 :host {
   display: block;
-  max-width: 44rem;
+  max-width: 48rem;
 }
 
 .page-header h1 {
@@ -14,22 +14,44 @@
   color: var(--text-muted);
 }
 
+.status {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+.retry {
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0.375rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 .month-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  counter-reset: month;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
 .month {
-  counter-increment: month;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   overflow: hidden;
+}
+
+.month.current {
+  border-color: var(--accent);
 }
 
 .month-header {
@@ -67,19 +89,11 @@
   transform: rotate(90deg);
 }
 
-.month-name::before {
-  content: counter(month) '.';
-  display: inline-block;
-  min-width: 1.5rem;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .month-name {
   font-weight: 600;
 }
 
-.day-count {
+.no-data {
   margin-left: auto;
   color: var(--text-muted);
   font-size: 0.8125rem;
@@ -111,11 +125,70 @@
 }
 
 .weekday {
+  min-width: 2.5rem;
   font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.balance {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Predicted days are model output, not settled money -- keep them visually secondary. */
+.balance.predicted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.balance.none {
+  color: var(--border-strong);
+}
+
+.day.empty .day-number,
+.day.empty .weekday {
+  opacity: 0.55;
+}
+
+.flags {
+  display: flex;
+  gap: 0.25rem;
+  min-width: 5.5rem;
+  justify-content: flex-end;
+}
+
+.flag {
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.flag.predicted {
+  background: var(--surface-hover);
+  color: var(--text-muted);
+}
+
+.flag.manual {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.flag.reviewed {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.day.today {
+  background: var(--accent-soft);
 }
 
 .day.today .day-number,
 .day.today .weekday {
   color: var(--accent);
   font-weight: 600;
+  opacity: 1;
 }

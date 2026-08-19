@@ -4,12 +4,12 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'home' },
   {
     path: 'home',
-    title: 'Home',
+    title: 'Kezdőlap',
     loadComponent: () => import('./home/home.component').then((m) => m.HomeComponent),
   },
   {
     path: 'transactions',
-    title: 'Transactions',
+    title: 'Tranzakciók',
     loadComponent: () =>
       import('./transactions/transaction-list.component').then((m) => m.TransactionListComponent),
   },
