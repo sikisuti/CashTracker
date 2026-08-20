@@ -66,4 +66,8 @@ public class DailyBalance {
     public boolean isReviewed() {
         return reviewed;
     }
+
+    public void setReviewed(boolean reviewed) {
+        this.reviewed = reviewed;
+    }
 }

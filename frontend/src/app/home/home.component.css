@@ -106,34 +106,69 @@
   border-top: 1px solid var(--border);
 }
 
+/* Four columns: date, balance and checkbox all packed left, details button pinned to the right
+   edge by the empty fourth track. The first two get a min-width so the checkboxes line up. */
 .day {
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  align-items: center;
   gap: 0.75rem;
-  padding: 0.3125rem 1rem 0.3125rem 2.75rem;
+  padding: 0.1875rem 0.75rem 0.1875rem 2.75rem;
 }
 
-.day:hover {
-  background: var(--surface-hover);
-}
-
-.day-number {
-  min-width: 1.5rem;
-  text-align: right;
+.date {
+  min-width: 6.5rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
 
-.weekday {
-  min-width: 2.5rem;
-  font-size: 0.875rem;
+.day .balance {
+  min-width: 7rem;
+  text-align: left;
+}
+
+.review {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: var(--success);
+  cursor: pointer;
+}
+
+/* Kept in the grid, not removed from it, so the columns stay put down the whole month. */
+.review.hidden {
+  visibility: hidden;
+}
+
+.details {
+  display: flex;
+  justify-self: end;
+  padding: 0.25rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
   color: var(--text-muted);
+  cursor: pointer;
+}
+
+.details:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.details:focus-visible,
+.review:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .balance {
-  margin-left: auto;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.month-header .balance {
+  margin-left: auto;
 }
 
 /* Predicted days are model output, not settled money -- keep them visually secondary. */
@@ -146,49 +181,55 @@
   color: var(--border-strong);
 }
 
-.day.empty .day-number,
-.day.empty .weekday {
+.day.empty .date {
   opacity: 0.55;
 }
 
-.flags {
-  display: flex;
-  gap: 0.25rem;
-  min-width: 5.5rem;
-  justify-content: flex-end;
+/* Row shading, weakest first -- each later rule wins where a day is several things at once.
+   background-color, never the shorthand: the shorthand would reset the hover tint below. */
+.day.weekend {
+  background-color: var(--surface);
 }
 
-.flag {
-  padding: 0 0.375rem;
-  border-radius: 999px;
-  font-size: 0.6875rem;
-  line-height: 1.4;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+.day.reviewed {
+  background-color: var(--success-soft);
 }
 
-.flag.predicted {
-  background: var(--surface-hover);
-  color: var(--text-muted);
+/* A reviewed weekend takes the same green a shade deeper, so weekends stay legible as weekends
+   in a run of reviewed days. */
+.day.weekend.reviewed {
+  background-color: color-mix(in srgb, var(--success-soft) 88%, var(--success));
 }
 
-.flag.manual {
-  background: var(--warning-soft);
-  color: var(--warning);
+/* Outweighs the two-class rule above, so today stays today even on a reviewed weekend. */
+.day-list .day.today {
+  background-color: var(--accent-soft);
 }
 
-.flag.reviewed {
-  background: var(--success-soft);
-  color: var(--success);
+/* Hover tints whatever the row already is rather than replacing it, so the weekend grey and the
+   reviewed green stay readable underneath. */
+.day:hover {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--text) 5%, transparent),
+    color-mix(in srgb, var(--text) 5%, transparent)
+  );
 }
 
-.day.today {
-  background: var(--accent-soft);
-}
-
-.day.today .day-number,
-.day.today .weekday {
+.day.today .date {
   color: var(--accent);
   font-weight: 600;
   opacity: 1;
+}
+
+/* Narrow screens: drop the day rows' indent so the four columns still fit on one line. */
+@media (max-width: 30rem) {
+  .day {
+    gap: 0.5rem;
+    padding-left: 1rem;
+  }
+
+  .date,
+  .day .balance {
+    min-width: 0;
+  }
 }

@@ -40,7 +40,13 @@ function buildDays(
   return Array.from({ length: dayCount }, (_, index) => {
     const date = new Date(year, month, index + 1);
     const key = toDateKey(date);
-    return { key, date, balance: balances.get(key) ?? null };
+    const weekday = date.getDay();
+    return {
+      key,
+      date,
+      weekend: weekday === 0 || weekday === 6,
+      balance: balances.get(key) ?? null,
+    };
   });
 }
 

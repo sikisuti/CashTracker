@@ -3,7 +3,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FORMATS } from '../locale';
 import { DailyBalance } from './daily-balance.model';
 import { DailyBalanceService } from './daily-balance.service';
-import { MonthEntry } from './month.model';
+import { DayDetailsDialogComponent } from './day-details-dialog.component';
+import { DayEntry, MonthEntry } from './month.model';
 import { buildMonthWindow, monthWindowBounds, toDateKey } from './month.util';
 
 /** How far the month list reaches on either side of the current month. */
@@ -12,7 +13,7 @@ const MONTHS_FORWARD = 12;
 
 @Component({
   selector: 'app-home',
-  imports: [CurrencyPipe, DatePipe],
+  imports: [CurrencyPipe, DatePipe, DayDetailsDialogComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })
@@ -31,6 +32,7 @@ export class HomeComponent implements OnInit {
   private readonly balances = signal<ReadonlyMap<string, DailyBalance>>(new Map());
   protected readonly loading = signal(true);
   protected readonly loadFailed = signal(false);
+  protected readonly reviewFailed = signal(false);
 
   protected readonly months = computed(() =>
     buildMonthWindow(this.today, MONTHS_BACK, MONTHS_FORWARD, this.balances()),
@@ -38,6 +40,9 @@ export class HomeComponent implements OnInit {
 
   /** Keys of the months currently expanded; the current month starts open. */
   private readonly expandedKeys = signal<ReadonlySet<string>>(new Set([this.todayKey.slice(0, 7)]));
+
+  /** The day whose detail dialog is open, or null while none is. */
+  protected readonly selectedDay = signal<DayEntry | null>(null);
 
   ngOnInit(): void {
     this.load();
@@ -81,5 +86,44 @@ export class HomeComponent implements OnInit {
 
   protected isToday(key: string): boolean {
     return key === this.todayKey;
+  }
+
+  /**
+   * Only a settled balance can be confirmed: a predicted day is model output with nothing to
+   * review yet, and a day the database holds no row for has nothing at all.
+   */
+  protected isReviewable(day: DayEntry): boolean {
+    return !!day.balance && !day.balance.predicted;
+  }
+
+  /**
+   * Applies the new reviewed flag straight away so the checkbox never lags behind the pointer,
+   * then rolls the row back to what it was if the write does not land.
+   */
+  protected setReviewed(day: DayEntry, event: Event): void {
+    const previous = day.balance;
+    if (!previous) {
+      return;
+    }
+
+    const reviewed = (event.target as HTMLInputElement).checked;
+    this.reviewFailed.set(false);
+    this.store({ ...previous, reviewed });
+
+    this.dailyBalanceService.setReviewed(day.key, reviewed).subscribe({
+      next: (stored) => this.store(stored),
+      error: () => {
+        this.store(previous);
+        this.reviewFailed.set(true);
+      },
+    });
+  }
+
+  protected openDetails(day: DayEntry): void {
+    this.selectedDay.set(day);
+  }
+
+  private store(balance: DailyBalance): void {
+    this.balances.update((balances) => new Map(balances).set(balance.date, balance));
   }
 }

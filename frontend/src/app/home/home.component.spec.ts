@@ -133,17 +133,168 @@ describe('HomeComponent', () => {
     expect(days[1].querySelector('.balance').textContent).toContain('—');
   });
 
-  it('should flag predicted, manually set and reviewed days in Hungarian', () => {
-    const fixture = render([
-      balanceOn(1, { predicted: true, balanceSetManually: true, reviewed: true }),
-    ]);
+  it('should lay a day row out as date, balance, reviewed checkbox and details button', () => {
+    const fixture = render([balanceOn(1)]);
 
-    const flags = fixture.nativeElement.querySelectorAll('.day-list .day .flag');
-    expect([...flags].map((flag: Element) => flag.textContent!.trim())).toEqual([
-      'becsült',
-      'kézi',
-      'ellenőrzött',
+    const columns = fixture.nativeElement.querySelector('.day-list .day').children;
+    expect([...columns].map((column: Element) => column.className)).toEqual([
+      'date',
+      'balance',
+      'review',
+      'details',
     ]);
+  });
+
+  it('should date a day row in full, without the weekday', () => {
+    const fixture = render([balanceOn(1)]);
+
+    const months = [
+      'jan.',
+      'febr.',
+      'márc.',
+      'ápr.',
+      'máj.',
+      'jún.',
+      'júl.',
+      'aug.',
+      'szept.',
+      'okt.',
+      'nov.',
+      'dec.',
+    ];
+    expect(textOf(fixture, '.day-list .day .date')).toBe(
+      `${today.getFullYear()} ${months[today.getMonth()]} 01`,
+    );
+  });
+
+  it('should show the reviewed flag as a checkbox rather than a label', () => {
+    const fixture = render([balanceOn(1, { reviewed: true }), balanceOn(2, { reviewed: false })]);
+
+    const days = fixture.nativeElement.querySelectorAll('.day-list .day');
+    expect(days[0].querySelector('.review').checked).toBe(true);
+    expect(days[1].querySelector('.review').checked).toBe(false);
+    expect(fixture.nativeElement.querySelector('.day-list .day .flag')).toBeNull();
+  });
+
+  it('should shade weekends and reviewed days', () => {
+    // Any Saturday past the 1st, so it cannot collide with the reviewed day below.
+    const saturday = [...Array(daysThisMonth).keys()]
+      .map((index) => index + 1)
+      .find(
+        (day) => day > 1 && new Date(today.getFullYear(), today.getMonth(), day).getDay() === 6,
+      )!;
+    const fixture = render([balanceOn(1, { reviewed: true }), balanceOn(saturday)]);
+
+    const days = fixture.nativeElement.querySelectorAll('.day-list .day');
+    expect(days[0].classList.contains('reviewed')).toBe(true);
+    expect(days[saturday - 1].classList.contains('weekend')).toBe(true);
+    expect(days[saturday - 1].classList.contains('reviewed')).toBe(false);
+  });
+
+  it('should only show the checkbox on days with a settled balance', () => {
+    const fixture = render([balanceOn(1), balanceOn(2, { predicted: true })]);
+
+    const days = fixture.nativeElement.querySelectorAll('.day-list .day');
+    const hidden = (index: number) =>
+      days[index].querySelector('.review').classList.contains('hidden');
+
+    expect(hidden(0)).toBe(false); // stored and settled
+    expect(hidden(1)).toBe(true); // predicted
+    expect(hidden(2)).toBe(true); // no row at all
+  });
+
+  it('should keep the columns aligned on a day whose checkbox is hidden', () => {
+    const fixture = render([balanceOn(1), balanceOn(2, { predicted: true })]);
+
+    const days = fixture.nativeElement.querySelectorAll('.day-list .day');
+    expect([...days[1].children].map((column: Element) => column.tagName)).toEqual(
+      [...days[0].children].map((column: Element) => column.tagName),
+    );
+  });
+
+  it('should not offer to review a day the database has no row for', () => {
+    const fixture = render([balanceOn(1)]);
+
+    const days = fixture.nativeElement.querySelectorAll('.day-list .day');
+    expect(days[0].querySelector('.review').disabled).toBe(false);
+    expect(days[1].querySelector('.review').disabled).toBe(true);
+  });
+
+  it('should patch the day when its checkbox is ticked', () => {
+    const fixture = render([balanceOn(1)]);
+
+    const checkbox: HTMLInputElement =
+      fixture.nativeElement.querySelector('.day-list .day .review');
+    checkbox.click();
+    fixture.detectChanges();
+
+    const request = httpMock.expectOne(`/api/daily-balances/${balanceOn(1).date}`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ reviewed: true });
+
+    request.flush(balanceOn(1, { reviewed: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.day-list .day .review').checked).toBe(true);
+  });
+
+  it('should untick the checkbox again and say so when the patch fails', () => {
+    const fixture = render([balanceOn(1)]);
+
+    fixture.nativeElement.querySelector('.day-list .day .review').click();
+    fixture.detectChanges();
+
+    httpMock
+      .expectOne(`/api/daily-balances/${balanceOn(1).date}`)
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.day-list .day .review').checked).toBe(false);
+    expect(textOf(fixture, '.review-error')).toContain('nem sikerült');
+  });
+
+  it('should open a modal with the day details when the details button is pressed', () => {
+    const fixture = render([balanceOn(1)]);
+
+    fixture.nativeElement.querySelector('.day-list .day .details').click();
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/daily-balances/${balanceOn(1).date}`).flush({
+      balance: balanceOn(1),
+      transactions: [],
+      corrections: [],
+    });
+    fixture.detectChanges();
+
+    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('dialog.day-dialog');
+    expect(dialog.open).toBe(true);
+  });
+
+  it('should close the modal and drop it from the page', () => {
+    const fixture = render([balanceOn(1)]);
+
+    fixture.nativeElement.querySelector('.day-list .day .details').click();
+    fixture.detectChanges();
+    httpMock.expectOne(`/api/daily-balances/${balanceOn(1).date}`).flush({
+      balance: balanceOn(1),
+      transactions: [],
+      corrections: [],
+    });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('dialog.day-dialog .close').click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('dialog.day-dialog')).toBeNull();
+  });
+
+  it('should not ask for details of a day the database has no row for', () => {
+    const fixture = render([balanceOn(1)]);
+
+    fixture.nativeElement.querySelectorAll('.day-list .day .details')[1].click();
+    fixture.detectChanges();
+
+    expect(textOf(fixture, 'dialog.day-dialog .status')).toBe('Ehhez a naphoz nincs tárolt adat.');
   });
 
   it('should summarise each month with its closing balance and no day count', () => {

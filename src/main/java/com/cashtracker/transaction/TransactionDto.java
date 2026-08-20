@@ -14,7 +14,7 @@ public record TransactionDto(
         String comment,
         String category) {
 
-    static TransactionDto from(Transaction transaction) {
+    public static TransactionDto from(Transaction transaction) {
         return new TransactionDto(
                 transaction.getId(),
                 transaction.getDailyBalance().getDate(),

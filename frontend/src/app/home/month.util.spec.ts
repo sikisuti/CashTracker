@@ -41,6 +41,15 @@ describe('month.util', () => {
     expect(months[0].days.length).toBe(29);
   });
 
+  it('should flag Saturdays and Sundays as weekend days', () => {
+    const days = buildMonthWindow(anchor, 0, 0, new Map())[0].days;
+
+    // 1 Aug 2026 is a Saturday, so the weekend days are 1, 2, 8, 9, ...
+    expect(days.filter((day) => day.weekend).map((day) => day.date.getDate())).toEqual([
+      1, 2, 8, 9, 15, 16, 22, 23, 29, 30,
+    ]);
+  });
+
   it('should join each day to its stored balance and leave the rest null', () => {
     const months = buildMonthWindow(
       anchor,

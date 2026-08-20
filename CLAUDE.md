@@ -42,8 +42,13 @@ both the API and the compiled SPA. `src/main/resources/static/` in source contro
 **Package-by-feature backend**: each package under `com.cashtracker` is a vertical slice
 (`transaction`, `category`, `dailybalance`, `correction`, `legacyimport`), not a horizontal
 layer. `transaction` and `dailybalance` expose a REST controller/service; the others are
-entity+repository pairs consumed internally (so far only by `legacyimport`). Follow this
-package-per-feature shape rather than introducing `controller`/`service`/`repository` packages.
+entity+repository pairs consumed internally (by `legacyimport`, and by `dailybalance` for the
+day detail view, which reads the transaction and correction repositories to assemble
+`DayDetailsDto`). Follow this package-per-feature shape rather than introducing
+`controller`/`service`/`repository` packages.
+
+Per-day lookups of transactions and corrections go through `daily_balance_id`, not the day's
+date, so those queries never have to compare SQLite's text-stored date column (see below).
 
 **Domain model**: `DailyBalance` is the anchor of the schema — every `Transaction` and
 `Correction` belongs to exactly one `DailyBalance` (one row per calendar day, holding that day's
@@ -90,6 +95,11 @@ hand-format any of that. All user-visible strings are written in Hungarian direc
 templates (no i18n extraction), and the shared `FORMATS` constant in the same file holds the
 display formats (`yyyy MMM dd` for dates, `yyyy MMMM` for month headings, whole-forint currency)
 so they cannot drift between templates.
+
+The day detail modal is a native `<dialog>`; jsdom parses the element but implements none of its
+behaviour, so [test-setup.ts](frontend/src/test-setup.ts) stands in `showModal`/`close` under test.
+It is wired in through the unit-test builder's `setupFiles` in
+[angular.json](frontend/angular.json).
 
 Standalone Angular components (no NgModules), calling `/api/*` through injected
 `HttpClient` services (`inject()`-style DI, e.g.

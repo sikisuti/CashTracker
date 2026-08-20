@@ -1,0 +1,129 @@
+<dialog #dialog class="day-dialog" (close)="closed.emit()" (click)="onBackdropClick($event)">
+  <header class="dialog-header">
+    <h2>{{ day().date | date: formats.date }}</h2>
+    <span class="weekday">{{ day().date | date: 'EEEE' }}</span>
+    <button type="button" class="close" aria-label="Bezárás" (click)="close()">×</button>
+  </header>
+
+  @if (!day().balance) {
+    <p class="status">Ehhez a naphoz nincs tárolt adat.</p>
+  } @else if (loading()) {
+    <p class="status">A nap részleteinek betöltése…</p>
+  } @else if (loadFailed()) {
+    <p class="status error">
+      A nap részleteit nem sikerült betölteni.
+      <button type="button" class="retry" (click)="load()">Újrapróbálkozás</button>
+    </p>
+  } @else if (details(); as detail) {
+    <section class="summary">
+      <span class="label">Napi egyenleg</span>
+      <span class="balance" [class.predicted]="detail.balance.predicted">
+        {{
+          detail.balance.balance | currency: formats.currency : 'symbol' : formats.currencyDigits
+        }}
+      </span>
+      <span class="flags">
+        @if (detail.balance.predicted) {
+          <span class="flag predicted">becsült</span>
+        }
+        @if (detail.balance.balanceSetManually) {
+          <span class="flag manual">kézi</span>
+        }
+        @if (detail.balance.reviewed) {
+          <span class="flag reviewed">ellenőrzött</span>
+        }
+      </span>
+    </section>
+
+    <section class="rows">
+      <h3>Tranzakciók</h3>
+      @if (detail.transactions.length) {
+        <table class="detail-table transactions">
+          <thead>
+            <tr>
+              <th scope="col">Idő</th>
+              <th scope="col">Megnevezés</th>
+              <th scope="col">Kategória</th>
+              <th scope="col" class="amount">Összeg</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (transaction of detail.transactions; track transaction.id) {
+              <tr>
+                <td class="time">
+                  {{
+                    transaction.transactionDateTime
+                      ? (transaction.transactionDateTime | date: 'HH:mm')
+                      : '—'
+                  }}
+                </td>
+                <td class="what">
+                  <span class="owner">{{ transaction.owner || transaction.type }}</span>
+                  @if (transaction.comment) {
+                    <span class="comment">{{ transaction.comment }}</span>
+                  }
+                </td>
+                <td class="category">
+                  @if (transaction.category) {
+                    {{ transaction.category }}
+                  } @else {
+                    <span class="uncategorised">nincs kategória</span>
+                  }
+                </td>
+                <td class="amount" [class.negative]="transaction.amount < 0">
+                  {{
+                    transaction.amount
+                      | currency: formats.currency : 'symbol' : formats.currencyDigits
+                  }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="status">Nincs tranzakció ezen a napon.</p>
+      }
+    </section>
+
+    <section class="rows">
+      <h3>Korrekciók</h3>
+      @if (detail.corrections.length) {
+        <table class="detail-table corrections">
+          <thead>
+            <tr>
+              <th scope="col">Kategória</th>
+              <th scope="col">Megjegyzés</th>
+              <th scope="col" class="amount">Összeg</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (correction of detail.corrections; track correction.id) {
+              <tr>
+                <td class="category">{{ correction.category }}</td>
+                <td class="what">
+                  <span class="comment">{{ correction.comment }}</span>
+                  <span class="flags">
+                    @if (correction.onlyMove) {
+                      <span class="flag manual">csak átsorolás</span>
+                    }
+                    @if (correction.pairedTransactionId) {
+                      <span class="flag predicted">párosított</span>
+                    }
+                  </span>
+                </td>
+                <td class="amount" [class.negative]="correction.amount < 0">
+                  {{
+                    correction.amount
+                      | currency: formats.currency : 'symbol' : formats.currencyDigits
+                  }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="status">Nincs korrekció ezen a napon.</p>
+      }
+    </section>
+  }
+</dialog>

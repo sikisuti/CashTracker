@@ -5,6 +5,8 @@ export interface DayEntry {
   /** ISO `YYYY-MM-DD`; the identity used for tracking and for balance lookup. */
   key: string;
   date: Date;
+  /** Saturday or Sunday -- shaded differently in the day list. */
+  weekend: boolean;
   /** The stored balance for this day, or null when the database holds no row for it. */
   balance: DailyBalance | null;
 }

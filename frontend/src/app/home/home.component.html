@@ -12,6 +12,10 @@
   </p>
 }
 
+@if (reviewFailed()) {
+  <p class="status error review-error">Az ellenőrzött jelölés mentése nem sikerült.</p>
+}
+
 <ul class="month-list">
   @for (month of months(); track month.key) {
     <li class="month" [class.current]="isCurrentMonth(month)">
@@ -49,9 +53,14 @@
       @if (isExpanded(month)) {
         <ol class="day-list" [id]="'days-' + month.key">
           @for (day of month.days; track day.key) {
-            <li class="day" [class.today]="isToday(day.key)" [class.empty]="!day.balance">
-              <span class="day-number">{{ day.date | date: 'd' }}</span>
-              <span class="weekday">{{ day.date | date: 'EEE' }}</span>
+            <li
+              class="day"
+              [class.weekend]="day.weekend"
+              [class.reviewed]="day.balance?.reviewed"
+              [class.today]="isToday(day.key)"
+              [class.empty]="!day.balance"
+            >
+              <span class="date">{{ day.date | date: formats.date }}</span>
 
               @if (day.balance; as balance) {
                 <span class="balance" [class.predicted]="balance.predicted">
@@ -59,20 +68,39 @@
                     balance.balance | currency: formats.currency : 'symbol' : formats.currencyDigits
                   }}
                 </span>
-                <span class="flags">
-                  @if (balance.predicted) {
-                    <span class="flag predicted" title="Becsült egyenleg">becsült</span>
-                  }
-                  @if (balance.balanceSetManually) {
-                    <span class="flag manual" title="Kézzel beállított egyenleg">kézi</span>
-                  }
-                  @if (balance.reviewed) {
-                    <span class="flag reviewed" title="Ellenőrzött nap">ellenőrzött</span>
-                  }
-                </span>
               } @else {
                 <span class="balance none">—</span>
               }
+
+              <input
+                type="checkbox"
+                class="review"
+                [checked]="day.balance?.reviewed ?? false"
+                [class.hidden]="!isReviewable(day)"
+                [disabled]="!isReviewable(day)"
+                [attr.aria-label]="'Ellenőrzött – ' + (day.date | date: formats.date)"
+                (change)="setReviewed(day, $event)"
+              />
+
+              <button
+                type="button"
+                class="details"
+                [attr.aria-label]="'Részletek – ' + (day.date | date: formats.date)"
+                (click)="openDetails(day)"
+              >
+                <svg
+                  class="chevron"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m9 6 6 6-6 6" />
+                </svg>
+              </button>
             </li>
           }
         </ol>
@@ -80,3 +108,7 @@
     </li>
   }
 </ul>
+
+@if (selectedDay(); as day) {
+  <app-day-details-dialog [day]="day" (closed)="selectedDay.set(null)" />
+}

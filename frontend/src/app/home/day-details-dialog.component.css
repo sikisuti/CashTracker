@@ -1,0 +1,197 @@
+.day-dialog {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
+  padding: 0 1.25rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+}
+
+.day-dialog::backdrop {
+  background: rgb(27 31 36 / 45%);
+}
+
+.dialog-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 1rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.dialog-header .weekday {
+  color: var(--text-muted);
+}
+
+.close {
+  margin-left: auto;
+  padding: 0 0.375rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: none;
+  color: var(--text-muted);
+  font-size: 1.375rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.status {
+  margin: 0.75rem 0;
+  color: var(--text-muted);
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+.retry {
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0.375rem;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+}
+
+.summary .label {
+  color: var(--text-muted);
+}
+
+.summary .balance {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Predicted days are model output, not settled money -- keep them visually secondary. */
+.summary .balance.predicted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.flags {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.flag {
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.flag.predicted {
+  background: var(--surface-hover);
+  color: var(--text-muted);
+}
+
+.flag.manual {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.flag.reviewed {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.rows h3 {
+  margin: 0.75rem 0 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* Bank comments are long, unbroken strings -- wrap them, and let the table scroll if that is
+   still not enough, so the dialog itself never scrolls sideways. */
+.rows {
+  overflow-x: auto;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detail-table th {
+  padding: 0.25rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.detail-table td {
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.detail-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.detail-table .time {
+  width: 3.5rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.detail-table .what {
+  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.detail-table .comment {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.detail-table .uncategorised {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.detail-table .amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-table td.amount.negative {
+  color: var(--danger);
+}
