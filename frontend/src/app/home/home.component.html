@@ -16,99 +16,123 @@
   <p class="status error review-error">Az ellenőrzött jelölés mentése nem sikerült.</p>
 }
 
-<ul class="month-list">
-  @for (month of months(); track month.key) {
-    <li class="month" [class.current]="isCurrentMonth(month)">
-      <button
-        type="button"
-        class="month-header"
-        [class.expanded]="isExpanded(month)"
-        [attr.aria-expanded]="isExpanded(month)"
-        [attr.aria-controls]="'days-' + month.key"
-        (click)="toggle(month)"
-      >
-        <svg
-          class="chevron"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
+<div class="layout" #layout>
+  <ul class="month-list">
+    @for (month of months(); track month.key) {
+      <li class="month" [class.current]="isCurrentMonth(month)">
+        <button
+          type="button"
+          class="month-header"
+          [class.expanded]="isExpanded(month)"
+          [attr.aria-expanded]="isExpanded(month)"
+          [attr.aria-controls]="'days-' + month.key"
+          (click)="toggle(month)"
         >
-          <path d="m9 6 6 6-6 6" />
-        </svg>
-        <span class="month-name">{{ month.date | date: formats.month }}</span>
+          <svg
+            class="chevron"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m9 6 6 6-6 6" />
+          </svg>
+          <span class="month-name">{{ month.date | date: formats.month }}</span>
 
-        @if (month.closingBalance; as closing) {
-          <span class="balance" [class.predicted]="closing.predicted">
-            {{ closing.balance | currency: formats.currency : 'symbol' : formats.currencyDigits }}
-          </span>
-        } @else {
-          <span class="no-data">nincs adat</span>
-        }
-      </button>
-
-      @if (isExpanded(month)) {
-        <ol class="day-list" [id]="'days-' + month.key">
-          @for (day of month.days; track day.key) {
-            <li
-              class="day"
-              [class.weekend]="day.weekend"
-              [class.reviewed]="day.balance?.reviewed"
-              [class.today]="isToday(day.key)"
-              [class.empty]="!day.balance"
-            >
-              <span class="date">{{ day.date | date: formats.date }}</span>
-
-              @if (day.balance; as balance) {
-                <span class="balance" [class.predicted]="balance.predicted">
-                  {{
-                    balance.balance | currency: formats.currency : 'symbol' : formats.currencyDigits
-                  }}
-                </span>
-              } @else {
-                <span class="balance none">—</span>
-              }
-
-              <input
-                type="checkbox"
-                class="review"
-                [checked]="day.balance?.reviewed ?? false"
-                [class.hidden]="!isReviewable(day)"
-                [disabled]="!isReviewable(day)"
-                [attr.aria-label]="'Ellenőrzött – ' + (day.date | date: formats.date)"
-                (change)="setReviewed(day, $event)"
-              />
-
-              <button
-                type="button"
-                class="details"
-                [attr.aria-label]="'Részletek – ' + (day.date | date: formats.date)"
-                (click)="openDetails(day)"
-              >
-                <svg
-                  class="chevron"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="m9 6 6 6-6 6" />
-                </svg>
-              </button>
-            </li>
+          @if (month.closingBalance; as closing) {
+            <span class="balance" [class.predicted]="closing.predicted">
+              {{ closing.balance | currency: formats.currency : 'symbol' : formats.currencyDigits }}
+            </span>
+          } @else {
+            <span class="no-data">nincs adat</span>
           }
-        </ol>
-      }
-    </li>
-  }
-</ul>
+        </button>
 
-@if (selectedDay(); as day) {
-  <app-day-details-dialog [day]="day" (closed)="selectedDay.set(null)" />
-}
+        @if (isExpanded(month)) {
+          <ol class="day-list" [id]="'days-' + month.key">
+            @for (day of month.days; track day.key) {
+              <li
+                class="day"
+                [attr.data-day]="day.key"
+                [class.weekend]="day.weekend"
+                [class.reviewed]="day.balance?.reviewed"
+                [class.today]="isToday(day.key)"
+                [class.empty]="!day.balance"
+                [class.selected]="selectedKey() === day.key"
+              >
+                <span class="date">{{ day.date | date: formats.date }}</span>
+
+                @if (day.balance; as balance) {
+                  <span class="balance" [class.predicted]="balance.predicted">
+                    {{
+                      balance.balance
+                        | currency: formats.currency : 'symbol' : formats.currencyDigits
+                    }}
+                  </span>
+                } @else {
+                  <span class="balance none">—</span>
+                }
+
+                <input
+                  type="checkbox"
+                  class="review"
+                  [checked]="day.balance?.reviewed ?? false"
+                  [class.hidden]="!isReviewable(day)"
+                  [disabled]="!isReviewable(day)"
+                  [attr.aria-label]="'Ellenőrzött – ' + (day.date | date: formats.date)"
+                  (change)="setReviewed(day, $event)"
+                />
+
+                <button
+                  type="button"
+                  class="details"
+                  [attr.aria-label]="'Részletek – ' + (day.date | date: formats.date)"
+                  [attr.aria-current]="selectedKey() === day.key ? 'true' : null"
+                  (click)="select(day)"
+                >
+                  <svg
+                    class="chevron"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 6 6 6-6 6" />
+                  </svg>
+                </button>
+              </li>
+            }
+          </ol>
+        }
+      </li>
+    }
+  </ul>
+
+  <!-- Pinned beside the list: the panel stays put wherever the months are scrolled to. -->
+  <aside class="detail-column">
+    <div class="detail-sticky" #detail>
+      @if (selectedDay(); as day) {
+        <app-day-details-panel [day]="day" (closed)="selectedKey.set(null)" />
+      } @else {
+        <p class="detail-placeholder">Egy nap részleteihez kattints a sor végén lévő nyílra.</p>
+      }
+    </div>
+  </aside>
+
+  @if (connector(); as line) {
+    <svg class="connector" aria-hidden="true">
+      <path [attr.d]="line.path" />
+      @if (line.cap; as cap) {
+        <path class="cap" [attr.d]="cap" />
+      } @else {
+        <circle [attr.cx]="line.x" [attr.cy]="line.y" r="3.5" />
+      }
+    </svg>
+  }
+</div>

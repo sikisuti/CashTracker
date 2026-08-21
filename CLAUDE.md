@@ -96,10 +96,22 @@ templates (no i18n extraction), and the shared `FORMATS` constant in the same fi
 display formats (`yyyy MMM dd` for dates, `yyyy MMMM` for month headings, whole-forint currency)
 so they cannot drift between templates.
 
-The day detail modal is a native `<dialog>`; jsdom parses the element but implements none of its
-behaviour, so [test-setup.ts](frontend/src/test-setup.ts) stands in `showModal`/`close` under test.
-It is wired in through the unit-test builder's `setupFiles` in
-[angular.json](frontend/angular.json).
+The home page shows a day's detail in a panel pinned beside the month list
+(`day-details-panel`), not in a modal, with an SVG elbow drawn in the gutter from the selected row
+to the panel. That geometry is a pure function of three measured rectangles in
+[connector.util.ts](frontend/src/app/home/connector.util.ts), so it is unit-tested without a
+browser; the component only measures — after every render, and again on scroll (captured on
+`window`, since the list scrolls inside the shell's `<main>` and scroll events do not bubble), on
+resize, and whenever the panel's own height changes. Once the selected row scrolls off the screen
+the line is not dropped but cut short at the edge, tipped with a chevron pointing the way back to
+the row. Under 64rem the columns stack, the panel pins to the top of the scrollport instead (the
+column itself is what sticks there — stacked, it is only as tall as the panel, so the wrapper
+inside it has nowhere to slide), and the connector goes for want of a gutter to draw it in.
+
+The panel is reused as the selection moves, so it loads through an effect rather than
+`ngOnInit`, and that effect deliberately keys on the day's *key*: the `DayEntry` objects are
+rebuilt whenever any balance changes, and ticking a review checkbox must not re-request the open
+day.
 
 Standalone Angular components (no NgModules), calling `/api/*` through injected
 `HttpClient` services (`inject()`-style DI, e.g.

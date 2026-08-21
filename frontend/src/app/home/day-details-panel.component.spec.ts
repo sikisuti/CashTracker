@@ -3,13 +3,13 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LOCALE_PROVIDERS } from '../locale';
 import { DayDetails } from './daily-balance.model';
-import { DayDetailsDialogComponent } from './day-details-dialog.component';
+import { DayDetailsPanelComponent } from './day-details-panel.component';
 import { DayEntry } from './month.model';
 
 /** Non-breaking space -- what the `hu` locale uses to group thousands. */
 const NBSP = ' ';
 
-describe('DayDetailsDialogComponent', () => {
+describe('DayDetailsPanelComponent', () => {
   let httpMock: HttpTestingController;
 
   const key = '2026-08-19';
@@ -33,7 +33,7 @@ describe('DayDetailsDialogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DayDetailsDialogComponent],
+      imports: [DayDetailsPanelComponent],
       providers: [provideHttpClient(), provideHttpClientTesting(), LOCALE_PROVIDERS],
     }).compileComponents();
 
@@ -42,9 +42,9 @@ describe('DayDetailsDialogComponent', () => {
 
   afterEach(() => httpMock.verify());
 
-  /** Creates the dialog for a day with a stored balance and answers its one request. */
-  function render(response: DayDetails): ComponentFixture<DayDetailsDialogComponent> {
-    const fixture = TestBed.createComponent(DayDetailsDialogComponent);
+  /** Creates the panel for a day with a stored balance and answers its one request. */
+  function render(response: DayDetails): ComponentFixture<DayDetailsPanelComponent> {
+    const fixture = TestBed.createComponent(DayDetailsPanelComponent);
     fixture.componentRef.setInput('day', day());
     fixture.detectChanges();
 
@@ -54,16 +54,16 @@ describe('DayDetailsDialogComponent', () => {
     return fixture;
   }
 
-  const textOf = (fixture: ComponentFixture<DayDetailsDialogComponent>, selector: string): string =>
+  const textOf = (fixture: ComponentFixture<DayDetailsPanelComponent>, selector: string): string =>
     fixture.nativeElement.querySelector(selector)!.textContent!.trim();
 
-  it('should open as a modal headed with the Hungarian date and weekday', () => {
+  it('should render in place rather than as a modal, headed with the date and weekday', () => {
     const fixture = render(details());
 
-    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('dialog');
-    expect(dialog.open).toBe(true);
-    expect(textOf(fixture, '.dialog-header h2')).toBe('2026 aug. 19');
-    expect(textOf(fixture, '.dialog-header .weekday')).toBe('szerda');
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.day-panel')).not.toBeNull();
+    expect(textOf(fixture, '.panel-header h2')).toBe('2026 aug. 19');
+    expect(textOf(fixture, '.panel-header .weekday')).toBe('szerda');
   });
 
   it('should summarise the balance with its Hungarian flags', () => {
@@ -177,7 +177,7 @@ describe('DayDetailsDialogComponent', () => {
   });
 
   it('should not request anything for a day the database has no row for', () => {
-    const fixture = TestBed.createComponent(DayDetailsDialogComponent);
+    const fixture = TestBed.createComponent(DayDetailsPanelComponent);
     fixture.componentRef.setInput('day', day(false));
     fixture.detectChanges();
 
@@ -185,8 +185,32 @@ describe('DayDetailsDialogComponent', () => {
     expect(textOf(fixture, '.status')).toBe('Ehhez a naphoz nincs tárolt adat.');
   });
 
+  it('should load the new day when the selection moves', () => {
+    const fixture = render(details());
+    const other = '2026-08-20';
+
+    fixture.componentRef.setInput('day', { ...day(), key: other, date: new Date(2026, 7, 20) });
+    fixture.detectChanges();
+
+    httpMock.expectOne(`/api/daily-balances/${other}`).flush(details());
+    fixture.detectChanges();
+
+    expect(textOf(fixture, '.panel-header h2')).toBe('2026 aug. 20');
+  });
+
+  /** The day entries are rebuilt whenever any balance changes -- that must not re-request. */
+  it('should not reload when the same day arrives as a new object', () => {
+    const fixture = render(details());
+
+    fixture.componentRef.setInput('day', { ...day() });
+    fixture.detectChanges();
+
+    httpMock.expectNone(url);
+    expect(fixture.nativeElement.querySelector('.summary')).not.toBeNull();
+  });
+
   it('should offer a Hungarian retry when the request fails', () => {
-    const fixture = TestBed.createComponent(DayDetailsDialogComponent);
+    const fixture = TestBed.createComponent(DayDetailsPanelComponent);
     fixture.componentRef.setInput('day', day());
     fixture.detectChanges();
 
@@ -212,7 +236,6 @@ describe('DayDetailsDialogComponent', () => {
     fixture.nativeElement.querySelector('.close').click();
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('dialog').open).toBe(false);
     expect(closed).toHaveBeenCalled();
   });
 });

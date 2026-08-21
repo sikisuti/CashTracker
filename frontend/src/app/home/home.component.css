@@ -1,6 +1,6 @@
 :host {
   display: block;
-  max-width: 48rem;
+  max-width: 76rem;
 }
 
 .page-header h1 {
@@ -32,6 +32,60 @@
   color: inherit;
   font: inherit;
   cursor: pointer;
+}
+
+/* Months on the left, the detail panel pinned on the right, and the connector drawn over both --
+   hence the positioned container. The right column is deliberately left stretched: the sticky
+   panel slides inside it, so that column has to be as tall as the month list beside it. */
+.layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24rem;
+  gap: 1.5rem;
+}
+
+.detail-sticky {
+  position: sticky;
+  /* Matches the shell's own top padding, so the panel keeps the same gap it starts with. */
+  top: 1.5rem;
+}
+
+.detail-placeholder {
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+/* Purely decorative, and laid over the rows -- it must never swallow a click. */
+.connector {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.connector path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+/* Tips the line where the selected row has scrolled past the edge of the screen, pointing the
+   way back to it. */
+.connector .cap {
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.connector circle {
+  fill: var(--accent);
 }
 
 .month-list {
@@ -206,6 +260,18 @@
   background-color: var(--accent-soft);
 }
 
+/* The row the connector starts from -- outlined rather than merely tinted, so it still stands
+   out on today's row, which is already accent-tinted. */
+.day-list .day.selected {
+  background-color: var(--accent-soft);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.day.selected .details {
+  color: var(--accent);
+}
+
 /* Hover tints whatever the row already is rather than replacing it, so the weekend grey and the
    reviewed green stay readable underneath. */
 .day:hover {
@@ -219,6 +285,30 @@
   color: var(--accent);
   font-weight: 600;
   opacity: 1;
+}
+
+/* Too narrow for two columns: the panel moves above the list and pins to the top of the
+   scrollport instead, and the connector drops away with no gutter left to draw it in. */
+@media (max-width: 64rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Stacked, the column is a row of its own and only as tall as the panel, so the wrapper inside
+     it has nowhere to slide. The column itself is what sticks here -- its containing block is the
+     whole layout, which is as tall as the month list. */
+  .detail-column {
+    order: -1;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding-bottom: 0.5rem;
+    background: var(--surface);
+  }
+
+  .detail-sticky {
+    position: static;
+  }
 }
 
 /* Narrow screens: drop the day rows' indent so the four columns still fit on one line. */

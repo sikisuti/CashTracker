@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { LOCALE_PROVIDERS } from '../locale';
 import { DailyBalance } from './daily-balance.model';
 import { HomeComponent } from './home.component';
@@ -253,9 +253,8 @@ describe('HomeComponent', () => {
     expect(textOf(fixture, '.review-error')).toContain('nem sikerült');
   });
 
-  it('should open a modal with the day details when the details button is pressed', () => {
-    const fixture = render([balanceOn(1)]);
-
+  /** Selects the first day of the month and answers the panel's request for it. */
+  function openFirstDay(fixture: ComponentFixture<HomeComponent>): void {
     fixture.nativeElement.querySelector('.day-list .day .details').click();
     fixture.detectChanges();
 
@@ -265,27 +264,63 @@ describe('HomeComponent', () => {
       corrections: [],
     });
     fixture.detectChanges();
+  }
 
-    const dialog: HTMLDialogElement = fixture.nativeElement.querySelector('dialog.day-dialog');
-    expect(dialog.open).toBe(true);
+  it('should invite the user to pick a day while nothing is selected', () => {
+    const fixture = render([balanceOn(1)]);
+
+    expect(fixture.nativeElement.querySelector('.day-panel')).toBeNull();
+    expect(textOf(fixture, '.detail-placeholder')).toContain('nyílra');
   });
 
-  it('should close the modal and drop it from the page', () => {
+  it('should show the day details beside the list, not in a modal', () => {
     const fixture = render([balanceOn(1)]);
 
-    fixture.nativeElement.querySelector('.day-list .day .details').click();
-    fixture.detectChanges();
-    httpMock.expectOne(`/api/daily-balances/${balanceOn(1).date}`).flush({
-      balance: balanceOn(1),
-      transactions: [],
-      corrections: [],
-    });
+    openFirstDay(fixture);
+
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
+    // The panel sits inside the layout's own column, not over the list.
+    expect(fixture.nativeElement.querySelector('.layout .detail-column .day-panel')).not.toBeNull();
+    expect(textOf(fixture, '.detail-column .panel-header h2')).toContain('01');
+  });
+
+  it('should mark the row the details were opened from', () => {
+    const fixture = render([balanceOn(1), balanceOn(2)]);
+
+    openFirstDay(fixture);
+
+    const days = fixture.nativeElement.querySelectorAll('.day-list .day');
+    expect(days[0].classList.contains('selected')).toBe(true);
+    expect(days[0].getAttribute('data-day')).toBe(balanceOn(1).date);
+    expect(days[1].classList.contains('selected')).toBe(false);
+  });
+
+  it('should keep the panel on the reviewed day without re-requesting it', () => {
+    const fixture = render([balanceOn(1)]);
+
+    openFirstDay(fixture);
+
+    fixture.nativeElement.querySelector('.day-list .day .review').click();
     fixture.detectChanges();
 
-    fixture.nativeElement.querySelector('dialog.day-dialog .close').click();
+    httpMock
+      .expectOne((request) => request.method === 'PATCH')
+      .flush(balanceOn(1, { reviewed: true }));
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('dialog.day-dialog')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.day-panel')).not.toBeNull();
+  });
+
+  it('should close the panel and go back to the placeholder', () => {
+    const fixture = render([balanceOn(1)]);
+
+    openFirstDay(fixture);
+
+    fixture.nativeElement.querySelector('.day-panel .close').click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.day-panel')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.detail-placeholder')).not.toBeNull();
   });
 
   it('should not ask for details of a day the database has no row for', () => {
@@ -294,7 +329,7 @@ describe('HomeComponent', () => {
     fixture.nativeElement.querySelectorAll('.day-list .day .details')[1].click();
     fixture.detectChanges();
 
-    expect(textOf(fixture, 'dialog.day-dialog .status')).toBe('Ehhez a naphoz nincs tárolt adat.');
+    expect(textOf(fixture, '.day-panel .status')).toBe('Ehhez a naphoz nincs tárolt adat.');
   });
 
   it('should summarise each month with its closing balance and no day count', () => {

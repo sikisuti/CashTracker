@@ -1,9 +1,21 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  OnInit,
+  afterNextRender,
+  afterRenderEffect,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { FORMATS } from '../locale';
+import { Connector, buildConnector } from './connector.util';
 import { DailyBalance } from './daily-balance.model';
 import { DailyBalanceService } from './daily-balance.service';
-import { DayDetailsDialogComponent } from './day-details-dialog.component';
+import { DayDetailsPanelComponent } from './day-details-panel.component';
 import { DayEntry, MonthEntry } from './month.model';
 import { buildMonthWindow, monthWindowBounds, toDateKey } from './month.util';
 
@@ -13,7 +25,7 @@ const MONTHS_FORWARD = 12;
 
 @Component({
   selector: 'app-home',
-  imports: [CurrencyPipe, DatePipe, DayDetailsDialogComponent],
+  imports: [CurrencyPipe, DatePipe, DayDetailsPanelComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })
@@ -21,6 +33,7 @@ export class HomeComponent implements OnInit {
   protected readonly formats = FORMATS;
 
   private readonly dailyBalanceService = inject(DailyBalanceService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly today = new Date();
   private readonly todayKey = toDateKey(this.today);
@@ -41,8 +54,42 @@ export class HomeComponent implements OnInit {
   /** Keys of the months currently expanded; the current month starts open. */
   private readonly expandedKeys = signal<ReadonlySet<string>>(new Set([this.todayKey.slice(0, 7)]));
 
-  /** The day whose detail dialog is open, or null while none is. */
-  protected readonly selectedDay = signal<DayEntry | null>(null);
+  /**
+   * The day shown in the detail panel, held as a key rather than as an entry: the entries are
+   * rebuilt whenever a balance changes, and the panel has to follow that day's new data.
+   */
+  protected readonly selectedKey = signal<string | null>(null);
+
+  protected readonly selectedDay = computed<DayEntry | null>(() => {
+    const key = this.selectedKey();
+    if (!key) {
+      return null;
+    }
+
+    const month = this.months().find((entry) => entry.key === key.slice(0, 7));
+    return month?.days.find((day) => day.key === key) ?? null;
+  });
+
+  private readonly layout = viewChild<ElementRef<HTMLElement>>('layout');
+  private readonly detail = viewChild<ElementRef<HTMLElement>>('detail');
+
+  /** The line drawn from the selected row to the panel, or null when there is none to draw. */
+  protected readonly connector = signal<Connector | null>(null);
+
+  private frame: number | null = null;
+
+  constructor() {
+    afterRenderEffect(() => {
+      // Everything that can move either end of the line: the selection, the rows themselves and
+      // which months are open.
+      this.selectedKey();
+      this.months();
+      this.expandedKeys();
+      this.measureConnector();
+    });
+
+    afterNextRender(() => this.watchViewport());
+  }
 
   ngOnInit(): void {
     this.load();
@@ -119,11 +166,76 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  protected openDetails(day: DayEntry): void {
-    this.selectedDay.set(day);
+  protected select(day: DayEntry): void {
+    this.selectedKey.set(day.key);
   }
 
   private store(balance: DailyBalance): void {
     this.balances.update((balances) => new Map(balances).set(balance.date, balance));
+  }
+
+  /**
+   * The panel is pinned while the list scrolls under it, so the line has to be re-measured on
+   * every scroll, resize and change of the panel's own height.
+   */
+  private watchViewport(): void {
+    const schedule = () => this.scheduleMeasure();
+
+    // Capture phase: the list scrolls inside the shell's <main>, and scroll events from an inner
+    // element never reach the window by bubbling.
+    window.addEventListener('scroll', schedule, { capture: true, passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
+
+    // ResizeObserver is missing under jsdom, where there is no geometry to react to anyway.
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
+    const layout = this.layout()?.nativeElement;
+    const detail = this.detail()?.nativeElement;
+    if (layout) {
+      observer?.observe(layout);
+    }
+    if (detail) {
+      observer?.observe(detail);
+    }
+
+    this.destroyRef.onDestroy(() => {
+      window.removeEventListener('scroll', schedule, { capture: true });
+      window.removeEventListener('resize', schedule);
+      observer?.disconnect();
+      if (this.frame !== null) {
+        cancelAnimationFrame(this.frame);
+      }
+    });
+  }
+
+  private scheduleMeasure(): void {
+    if (this.frame !== null) {
+      return;
+    }
+
+    this.frame = requestAnimationFrame(() => {
+      this.frame = null;
+      this.measureConnector();
+    });
+  }
+
+  private measureConnector(): void {
+    const layout = this.layout()?.nativeElement;
+    const key = this.selectedKey();
+    const row = key ? layout?.querySelector(`[data-day="${key}"]`) : null;
+    const panel = layout?.querySelector('.day-panel');
+
+    if (!layout || !row || !panel) {
+      this.connector.set(null);
+      return;
+    }
+
+    this.connector.set(
+      buildConnector(
+        row.getBoundingClientRect(),
+        panel.getBoundingClientRect(),
+        layout.getBoundingClientRect(),
+        window.innerHeight,
+      ),
+    );
   }
 }
